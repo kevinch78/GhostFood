@@ -1,0 +1,67 @@
+import 'package:ghost_food/domain/entities/profile_entity.dart';
+import 'package:ghost_food/domain/repositories/profile_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class ProfileRepositoryImpl implements ProfileRepository {
+  final SupabaseClient _supabase;
+
+  ProfileRepositoryImpl(this._supabase);
+
+  @override
+  Future<ProfileEntity?> getProfile(String userId) async {
+    try {
+      final response =
+          await _supabase.from('profiles').select().eq('id', userId).single();
+
+      return _fromMap(response);
+    } catch (e) {
+      // Si no se encuentra el perfil (error PostgrestException), devolvemos null.
+      // Para otros errores, los relanzamos para que el controlador los maneje.
+      if (e is PostgrestException && e.code == 'PGRST116') {
+        return null;
+      }
+      // Relanzamos el error para que sea capturado en el SessionController
+      throw Exception('Error al obtener el perfil: $e');
+    }
+  }
+
+  @override
+  Future<void> createProfile(ProfileEntity profile) async {
+    await _supabase.from('profiles').insert({
+      'id': profile.id,
+      'full_name': profile.fullName,
+      'role': profile.role.name, // .name convierte el enum a string ('cliente', 'cocinero', 'creador')
+    });
+  }
+  
+
+  // --- HELPERS ---
+
+  ProfileEntity _fromMap(Map<String, dynamic> map) {
+    return ProfileEntity(
+      id: map['id'],
+      fullName: map['full_name'],
+      role: _roleFromString(map['role']),
+      // Aquí se añadirán más campos en el futuro
+    );
+  }
+
+  UserRole _roleFromString(String role) {
+    switch (role) {
+      case 'cliente':
+        return UserRole.cliente;
+      case 'cocinero':
+        return UserRole.cocinero;
+      case 'creador': // ¡LA LÍNEA QUE FALTABA!
+        return UserRole.creador;
+      default:
+        throw Exception('Unknown role: $role');
+    }
+  }
+  
+  @override
+  Future<void> updateProfile(ProfileEntity profile) {
+    // TODO: implement updateProfile
+    throw UnimplementedError();
+  }
+}
