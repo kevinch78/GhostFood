@@ -336,3 +336,46 @@ Esta política permite que un usuario vea un pedido si:
 🔍 REPO DEBUG: Parsed 1 orders
    - Order: X, Recipe: xxx-xxx, Kitchen: null
 🔍 DEBUG: Received 1 pending orders
+
+4...
+-- 1. Agregar campos de personalización al perfil
+ALTER TABLE profiles 
+  ADD COLUMN IF NOT EXISTS location_city TEXT,
+  ADD COLUMN IF NOT EXISTS dislikes TEXT[],
+  ADD COLUMN IF NOT EXISTS allergies TEXT[];
+
+-- 2. Actualizar política RLS de orders para pedidos de IA
+DROP POLICY IF EXISTS "Allow users to view relevant orders" ON public.orders;
+
+CREATE POLICY "Allow users to view relevant orders" 
+  ON public.orders FOR SELECT 
+  USING (
+    -- El cliente ve sus propios pedidos
+    auth.uid() = client_id 
+    OR 
+    -- La cocina ve pedidos asignados
+    auth.uid() = kitchen_id
+    OR
+    -- Cocineros ven pedidos pendientes de recetas aprobadas
+    (
+      status = 'PENDING_ACCEPTANCE' 
+      AND kitchen_id IS NULL
+      AND recipe_id IN (
+        SELECT recipe_id 
+        FROM agreements 
+        WHERE kitchen_id = auth.uid() 
+        AND status = 'APPROVED'
+      )
+    )
+    OR
+    -- NUEVO: Cocineros ven TODOS los pedidos de IA (sin convenio)
+    (
+      status = 'PENDING_ACCEPTANCE'
+      AND kitchen_id IS NULL
+      AND recipe_id IN (
+        SELECT id 
+        FROM recipes 
+        WHERE type = 'AI_GENERATED'
+      )
+    )
+  );

@@ -31,3 +31,6 @@ void showAuthErrorSnackBar(BuildContext context, dynamic exception) {
     ),
   );
 }
+
+
+

@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 import 'package:ghost_food/auth/auth_service.dart';
+import 'package:ghost_food/data/repositories/ai_recipe_repository_impl.dart';
+import 'package:ghost_food/domain/repositories/ai_recipe_repository.dart';
 import 'package:ghost_food/presentation/controllers/cart_controller.dart';
 import 'package:ghost_food/core/config/supabase_config.dart';
 import 'package:ghost_food/data/repositories/profile_repository_impl.dart';
@@ -30,6 +32,8 @@ class InitialBindings extends Bindings {
     Get.lazyPut<RecipeRepository>(() => RecipeRepositoryImpl(Get.find()), fenix: true);
     Get.lazyPut<AgreementRepository>(() => AgreementRepositoryImpl(Get.find()), fenix: true);
     Get.lazyPut<OrderRepository>(() => OrderRepositoryImpl(Get.find()), fenix: true);
+    Get.lazyPut<AiRecipeRepository>(() => AiRecipeRepositoryImpl(Get.find()), fenix: true);
+
 
     // --- CONTROLLERS (Singleton) ---
     // El carrito debe ser un singleton para mantener su estado en toda la app.

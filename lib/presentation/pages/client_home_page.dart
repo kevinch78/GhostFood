@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:ghost_food/auth/auth_service.dart';
 import 'package:ghost_food/presentation/controllers/cart_controller.dart';
 import 'package:ghost_food/presentation/widgets/category_filter_list_client.dart';
+import 'package:ghost_food/presentation/pages/ai_chef_page.dart';
 import 'package:ghost_food/presentation/controllers/client_home_controller.dart';
 import 'package:ghost_food/presentation/pages/my_orders_page.dart';
 import 'package:ghost_food/presentation/widgets/recipe_card_client.dart';
@@ -83,6 +84,15 @@ class ClientHomePage extends StatelessWidget {
               }),
             ),
           ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Get.to(() => const AiChefPage(), transition: Transition.downToUp),
+        backgroundColor: const Color(0xFF00FFB8),
+        icon: const Icon(Icons.auto_awesome, color: Colors.black),
+        label: const Text(
+          'Chef IA',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
     );

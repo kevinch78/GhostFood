@@ -1,3 +1,4 @@
+import 'package:ghost_food/data/models/profile_model.dart';
 import 'package:ghost_food/domain/entities/profile_entity.dart';
 import 'package:ghost_food/domain/repositories/profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -60,8 +61,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
   
   @override
-  Future<void> updateProfile(ProfileEntity profile) {
-    // TODO: implement updateProfile
-    throw UnimplementedError();
+  Future<void> updateProfile(ProfileEntity profile) async {
+    try {
+      final profileModel = ProfileModel.fromEntity(profile);
+      final dataToUpdate = profileModel.toJson();
+      dataToUpdate.remove('id'); // No actualizar el ID
+      
+      await _supabase
+          .from('profiles')
+          .update(dataToUpdate)
+          .eq('id', profile.id);
+    } catch (e) {
+      throw Exception('Error al actualizar el perfil: $e');
+    }
   }
 }
