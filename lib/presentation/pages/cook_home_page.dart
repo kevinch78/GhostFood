@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ghost_food/auth/auth_service.dart';
-import 'package:ghost_food/data/models/order_model.dart';
-import 'package:ghost_food/domain/entities/order_entity.dart';
 import 'package:ghost_food/domain/entities/recipe_entity.dart';
+import 'package:ghost_food/presentation/controllers/active_orders_controller.dart';
+import 'package:ghost_food/presentation/controllers/agreement_controller.dart';
 import 'package:ghost_food/presentation/controllers/cook_home_controller.dart';
-import 'package:ghost_food/domain/entities/agreement_entity.dart';
-import 'package:ghost_food/presentation/controllers/recipe_detail_page.dart';
+import 'package:ghost_food/presentation/controllers/market_place_controller.dart';
+import 'package:ghost_food/presentation/widgets/ai_recipes_tab.dart';
 import 'package:ghost_food/presentation/widgets/custom_app_bar.dart';
-import 'package:ghost_food/presentation/widgets/empty_state.dart';
+import 'package:ghost_food/presentation/widgets/pending_orders_tab.dart';
+import 'package:ghost_food/presentation/widgets/recipe_marketplace_tab.dart';
+import 'package:ghost_food/presentation/widgets/active_orders_tab.dart';
 
 class CookHomePage extends StatefulWidget {
   const CookHomePage({super.key});
@@ -24,7 +25,7 @@ class _CookHomePageState extends State<CookHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // ✅ Cambiado de 3 a 4
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -35,31 +36,38 @@ class _CookHomePageState extends State<CookHomePage>
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(CookHomeController());
+    final cookHomeController = Get.put(CookHomeController());
+    final marketplaceController = Get.find<MarketPlaceController>();
+    final agreementController = Get.find<AgreementController>();
+    final orderController = Get.find<ActiveOrderController>();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
-      appBar: CustomAppBar(
-        title: 'Cocina GhostFood',
-        // actions: [
-        //   IconButton(
-        //     onPressed: () => Get.find<AuthService>().signOutAndClean(),
-        //     icon: const Icon(Icons.logout, color: Color(0xFFFF6B6B)),
-        //     tooltip: 'Cerrar sesión',
-        //   ),
-        // ],
-      ),
+      appBar: const CustomAppBar(title: 'Cocina GhostFood'),
       body: Column(
         children: [
-          _buildTabBar(controller),
+          _buildTabBar(marketplaceController, orderController),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildRecipeMarketplaceView(controller),
-                _buildAiRecipesView(controller), // ✅ Nueva pestaña
-                _buildPendingOrdersView(controller),
-                _buildActiveOrdersView(controller),
+                RecipeMarketplaceTab(
+                  cookHomeController: cookHomeController,
+                  marketplaceController: marketplaceController,
+                  agreementController: agreementController,
+                ),
+                AiRecipesTab(
+                  cookHomeController: cookHomeController,
+                  marketplaceController: marketplaceController,
+                ),
+                PendingOrdersTab(
+                  cookHomeController: cookHomeController,
+                  orderController: orderController,
+                ),
+                ActiveOrdersTab(
+                  cookHomeController: cookHomeController,
+                  orderController: orderController,
+                ),
               ],
             ),
           ),
@@ -68,7 +76,10 @@ class _CookHomePageState extends State<CookHomePage>
     );
   }
 
-  Widget _buildTabBar(CookHomeController controller) {
+  Widget _buildTabBar(
+    MarketPlaceController marketplaceController,
+    ActiveOrderController orderController,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
@@ -87,7 +98,6 @@ class _CookHomePageState extends State<CookHomePage>
         unselectedLabelColor: Colors.white70,
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         tabs: [
-          // 🥘 Tab Recetas (usuarios)
           const Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -104,11 +114,9 @@ class _CookHomePageState extends State<CookHomePage>
               ],
             ),
           ),
-
-          // 🤖 Tab Recetas IA (nuevo)
           Tab(
             child: Obx(() {
-              final aiCount = controller.allRecipes
+              final aiCount = marketplaceController.allRecipes
                   .where((r) => r.type == RecipeType.aiGenerated)
                   .length;
               return Row(
@@ -119,41 +127,36 @@ class _CookHomePageState extends State<CookHomePage>
                   Flexible(
                     child: Text(
                       'IA ($aiCount)',
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis, maxLines: 1,
                     ),
                   ),
                 ],
               );
             }),
           ),
-
-          // 📦 Tab Pedidos
           Tab(
             child: Obx(() {
-              final pendingCount = controller.pendingOrders.length;
+              final pendingCount = orderController.pendingOrders.length;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Badge(
                     label: Text('$pendingCount'),
                     isLabelVisible: pendingCount > 0,
-                    child: const Icon(Icons.notifications_active_outlined, size: 18),
+                    child:
+                        const Icon(Icons.notifications_active_outlined, size: 18),
                   ),
                   const SizedBox(width: 4),
                   const Flexible(
                     child: Text(
                       'Pedidos',
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis, maxLines: 1,
                     ),
                   ),
                 ],
               );
             }),
           ),
-
-          // 🔥 Tab En Progreso
           const Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -163,8 +166,7 @@ class _CookHomePageState extends State<CookHomePage>
                 Flexible(
                   child: Text(
                     'Activos',
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis, maxLines: 1,
                   ),
                 ),
               ],
@@ -173,480 +175,5 @@ class _CookHomePageState extends State<CookHomePage>
         ],
       ),
     );
-  }
-
-  // ✅ NUEVA VISTA: Recetas de IA
-  Widget _buildAiRecipesView(CookHomeController controller) {
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF00FFB8)));
-      }
-      
-      final aiRecipes = controller.allRecipes
-          .where((r) => r.type == RecipeType.aiGenerated)
-          .toList();
-
-      if (aiRecipes.isEmpty) {
-        return const EmptyState(
-          icon: Icons.auto_awesome_outlined,
-          title: 'Sin recetas de IA aún',
-          subtitle: 'Las recetas generadas por GhostChef aparecerán aquí.',
-        );
-      }
-
-      return RefreshIndicator(
-        onRefresh: controller.loadInitialData,
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-          itemCount: aiRecipes.length,
-          itemBuilder: (context, index) {
-            final recipe = aiRecipes[index];
-            return GestureDetector(
-              onTap: () => Get.to(() => RecipeDetailPage(recipe: recipe)),
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                color: const Color(0xFF1A1A1A),
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: const Color(0xFF00FFB8).withOpacity(0.3),
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (recipe.imageUrl != null)
-                      Image.network(recipe.imageUrl!,
-                          height: 150, fit: BoxFit.cover),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00FFB8).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.auto_awesome, 
-                                      size: 14, 
-                                      color: Color(0xFF00FFB8)),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'IA',
-                                      style: TextStyle(
-                                        color: Color(0xFF00FFB8),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  recipe.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          if (recipe.description != null)
-                            Text(
-                              recipe.description!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 14,
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Precio Sugerido: \$${recipe.basePrice.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Color(0xFF00FFB8),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00FFB8).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.check_circle, 
-                                  color: Color(0xFF00FFB8), 
-                                  size: 16),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Uso libre • Sin permisos necesarios',
-                                    style: TextStyle(
-                                      color: Color(0xFF00FFB8),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    });
-  }
-
-  Widget _buildRecipeMarketplaceView(CookHomeController controller) {
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF00FFB8)));
-      }
-      if (controller.marketplaceRecipes.isEmpty) {
-        return const EmptyState(
-          icon: Icons.restaurant_menu_outlined,
-          title: 'Sin recetas disponibles',
-          subtitle: 'Las recetas de creadores aparecerán aquí.',
-        );
-      }
-      return RefreshIndicator(
-        onRefresh: controller.loadInitialData,
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-          itemCount: controller.marketplaceRecipes.length,
-          itemBuilder: (context, index) {
-            final recipe = controller.marketplaceRecipes[index];
-            final status = controller.getAgreementStatusForRecipe(recipe.id);
-            final isRequesting = controller.isRequesting[recipe.id] ?? false;
-            final isApproved = status == AgreementStatus.approved;
-
-            return GestureDetector(
-              onTap: isApproved ? () => Get.to(() => RecipeDetailPage(recipe: recipe)) : null,
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                color: const Color(0xFF1A1A1A),
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (recipe.imageUrl != null)
-                      Image.network(recipe.imageUrl!,
-                          height: 150, fit: BoxFit.cover),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(recipe.name,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Text(
-                              'Precio Sugerido: \$${recipe.basePrice.toStringAsFixed(0)}',
-                              style: const TextStyle(color: Colors.white70)),
-                          const SizedBox(height: 16),
-                          if (recipe.creatorId != controller.getCurrentUserId())
-                            _buildActionButton(
-                              status: status,
-                              isRequesting: isRequesting,
-                              onPressed: () =>
-                                  controller.requestAgreement(recipe),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    });
-  }
-
-  Widget _buildPendingOrdersView(CookHomeController controller) {
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF00FFB8)));
-      }
-      if (controller.pendingOrders.isEmpty) {
-        return const EmptyState(
-          icon: Icons.notifications_off_outlined,
-          title: 'Sin pedidos pendientes',
-          subtitle:
-              'Aquí aparecerán los nuevos pedidos disponibles.',
-        );
-      }
-      return RefreshIndicator(
-        onRefresh: controller.loadInitialData,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: controller.pendingOrders.length,
-          itemBuilder: (context, index) {
-            final order = controller.pendingOrders[index];
-            return _buildPendingOrderCard(controller, order);
-          },
-        ),
-      );
-    });
-  }
-
-  Widget _buildActiveOrdersView(CookHomeController controller) {
-    return Obx(() {
-      if (controller.isLoading.value) {
-        return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF00FFB8)));
-      }
-      if (controller.activeOrders.isEmpty) {
-        return const EmptyState(
-          icon: Icons.no_food_outlined,
-          title: 'Sin pedidos activos',
-          subtitle: 'Acepta un pedido pendiente para que aparezca aquí.',
-        );
-      }
-      return RefreshIndicator(
-        onRefresh: controller.loadInitialData,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: controller.activeOrders.length,
-          itemBuilder: (context, index) {
-            final order = controller.activeOrders[index];
-            return _buildActiveOrderCard(controller, order);
-          },
-        ),
-      );
-    });
-  }
-
-  Widget _buildActiveOrderCard(
-      CookHomeController controller, OrderEntity order) {
-    return Card(
-      color: const Color(0xFF1A1A1A),
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              order.recipe?.name ?? 'Receta desconocida',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            _buildStatusChip(order.status),
-            const SizedBox(height: 16),
-            if (order.status == OrderStatus.accepted)
-              ElevatedButton.icon(
-                onPressed: () => controller.updateOrderStatus(
-                    order.id, OrderStatus.inPreparation),
-                icon: const Icon(Icons.soup_kitchen_outlined),
-                label: const Text('Marcar como "En Preparación"'),
-                style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 44)),
-              ),
-            if (order.status == OrderStatus.inPreparation)
-              ElevatedButton.icon(
-                onPressed: () => controller.updateOrderStatus(
-                    order.id, OrderStatus.outForDelivery),
-                icon: const Icon(Icons.delivery_dining_outlined),
-                label: const Text('Marcar como "Enviado"'),
-                style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 44)),
-              ),
-            if (order.status == OrderStatus.outForDelivery)
-              ElevatedButton.icon(
-                onPressed: () => controller.updateOrderStatus(
-                    order.id, OrderStatus.delivered),
-                icon: const Icon(Icons.done_all),
-                label: const Text('Marcar como "Entregado"'),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 44)),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(OrderStatus status) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF00FFB8).withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        OrderModel.statusToString(status)
-                .replaceAll('_', ' ')
-                .capitalizeFirst ??
-            '',
-        style: const TextStyle(
-            color: Color(0xFF00FFB8), fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildPendingOrderCard(
-      CookHomeController controller, OrderEntity order) {
-    final isAccepting = controller.isAcceptingOrder[order.id] ?? false;
-    return Card(
-      color: const Color(0xFF1A1A1A),
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-            color: const Color(0xFF00FFB8).withOpacity(0.5), width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Nuevo Pedido: ${order.recipe?.name ?? 'Receta desconocida'}',
-              style: const TextStyle(
-                  color: Color(0xFF00FFB8),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Valor: \$${order.totalPrice.toStringAsFixed(0)}',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: isAccepting ? null : () => _handleAcceptOrder(controller, order),
-              icon: isAccepting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.check_circle_outline),
-              label: Text(isAccepting ? 'Aceptando...' : 'Aceptar Pedido'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00FFB8),
-                foregroundColor: Colors.black,
-                minimumSize: const Size(double.infinity, 44),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _handleAcceptOrder(CookHomeController controller, OrderEntity order) async {
-    try {
-      await controller.acceptOrder(order);
-
-      if (!context.mounted) return;
-
-      Get.snackbar(
-        '¡Pedido Aceptado!',
-        'Prepara "${order.recipe?.name ?? 'receta desconocida'}" para el cliente.',
-        backgroundColor: const Color(0xFF4CAF50),
-        colorText: Colors.white,
-        icon: const Icon(Icons.check_circle, color: Colors.white),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      Get.snackbar(
-        'Error al aceptar',
-        'El pedido no pudo ser aceptado. Es posible que ya haya sido tomado por otra cocina. ($e)',
-        backgroundColor: const Color(0xFFFF6B6B),
-        colorText: Colors.white,
-        icon: const Icon(Icons.error_outline, color: Colors.white),
-      );
-    }
-  }
-
-  Widget _buildActionButton({
-    required AgreementStatus? status,
-    required bool isRequesting,
-    required VoidCallback onPressed,
-  }) {
-    if (isRequesting) {
-      return const ElevatedButton(
-        onPressed: null,
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    switch (status) {
-      case AgreementStatus.approved:
-        return const ElevatedButton(
-          onPressed: null,
-          style: ButtonStyle(
-            backgroundColor: MaterialStatePropertyAll(Colors.green),
-          ),
-          child: Text('Aprobado'),
-        );
-      case AgreementStatus.requested:
-        return const ElevatedButton(
-          onPressed: null,
-          child: Text('Pendiente'),
-        );
-      case AgreementStatus.rejected:
-        return const ElevatedButton(
-          onPressed: null,
-          style: ButtonStyle(
-            backgroundColor: MaterialStatePropertyAll(Colors.red),
-          ),
-          child: Text('Rechazado'),
-        );
-      default:
-        return ElevatedButton(
-          onPressed: onPressed,
-          style: const ButtonStyle(
-            backgroundColor: MaterialStatePropertyAll(Color(0xFF00FFB8)),
-          ),
-          child: const Text('Solicitar Permiso'),
-        );
-    }
   }
 }

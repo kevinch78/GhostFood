@@ -6,6 +6,7 @@ import 'package:ghost_food/domain/repositories/ai_recipe_repository.dart';
 import 'package:ghost_food/domain/repositories/order_repository.dart';
 import 'package:ghost_food/domain/repositories/recipe_repository.dart';
 import 'package:ghost_food/presentation/controllers/cart_controller.dart';
+import 'package:ghost_food/presentation/controllers/creator_home_controller.dart';
 import 'package:ghost_food/presentation/controllers/session_controller.dart';
 
 class AiChefController extends GetxController {
@@ -138,6 +139,14 @@ class AiChefController extends GetxController {
       await _orderRepository.createOrderFromCartItem(
         CartItem.fromRecipe(savedRecipe),
       );
+
+      // AVISAMOS AL CONTROLADOR DEL CREADOR QUE HAY NUEVOS DATOS
+      // Si el CreatorHomeController está activo (lo cual debería estar si el usuario
+      // es un cliente que puede crear recetas), le pedimos que recargue sus datos.
+      // Esto actualizará la lista "Mis Recetas" en la pantalla del creador.
+      if (Get.isRegistered<CreatorHomeController>()) {
+        Get.find<CreatorHomeController>().loadData();
+      }
 
       return true; // Éxito
     } on ServerException catch (e) {

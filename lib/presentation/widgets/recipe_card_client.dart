@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ghost_food/presentation/controllers/cart_controller.dart';
 import 'package:ghost_food/domain/entities/recipe_entity.dart';
+import 'package:ghost_food/presentation/widgets/customer_recipe_detail_dialog.dart';
 
 class RecipeCardClient extends StatelessWidget {
   final RecipeEntity recipe;
@@ -15,25 +16,30 @@ class RecipeCardClient extends StatelessWidget {
   Widget build(BuildContext context) {
     final cartController = Get.find<CartController>();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildImageSection(),
-          _buildInfoSection(context, cartController),
-        ],
+    return GestureDetector(
+      onTap: () {
+        Get.dialog(CustomerRecipeDetailDialog(recipe: recipe));
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildImageSection(),
+            _buildInfoSection(context, cartController),
+          ],
+        ),
       ),
     );
   }
