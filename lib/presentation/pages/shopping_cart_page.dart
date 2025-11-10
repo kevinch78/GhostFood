@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ghost_food/presentation/controllers/cart_controller.dart';
 import 'package:ghost_food/presentation/controllers/order_controller.dart';
+import 'package:ghost_food/presentation/pages/my_orders_page.dart';
 import 'package:ghost_food/presentation/widgets/cart_item_card.dart';
 
 class ShoppingCartPage extends StatelessWidget {
@@ -314,6 +315,7 @@ class ShoppingCartPage extends StatelessWidget {
 
     if (success) {
       cartController.clear(); // Vaciamos el carrito
+      Get.back(); // Volvemos a la página anterior para que el snackbar se muestre sobre la home.
       Get.snackbar(
         '¡Pedido Realizado!',
         'Tus recetas están buscando una cocina. Revísalas en "Mis Pedidos".',
@@ -321,6 +323,18 @@ class ShoppingCartPage extends StatelessWidget {
         colorText: Colors.white,
       );
       Get.back(); // Volvemos a la página anterior
+      Get.snackbar(
+        '¡Pedido Realizado!',
+        'Tus recetas ya están buscando una cocina. Sigue su estado aquí.',
+        backgroundColor: const Color(0xFF2E7D32), // Un verde más oscuro
+        colorText: Colors.white,
+        icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+        duration: const Duration(seconds: 5),
+        mainButton: TextButton(
+          onPressed: () => Get.to(() => const MyOrdersPage()),
+          child: const Text('VER PEDIDOS', style: TextStyle(color: Color(0xFF00FFB8), fontWeight: FontWeight.bold)),
+        ),
+      );
     } else {
       Get.snackbar(
         'Error',

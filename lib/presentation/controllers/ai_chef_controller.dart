@@ -51,10 +51,23 @@ class AiChefController extends GetxController {
 
     isLoading.value = true;
 
+    // Construir el contexto del usuario desde el perfil de sesión
+    final profile = _sessionController.userProfile.value;
+    final userContext = StringBuffer();
+    if (profile != null) {
+      if (profile.fullName != null && profile.fullName!.isNotEmpty) userContext.writeln('- Nombre: ${profile.fullName}');
+      if (profile.locationCity != null && profile.locationCity!.isNotEmpty) userContext.writeln('- Ubicación: ${profile.locationCity}');
+      if (profile.allergies != null && profile.allergies!.isNotEmpty) userContext.writeln('- Alergias: ${profile.allergies!.join(', ')}');
+      if (profile.dislikes != null && profile.dislikes!.isNotEmpty) userContext.writeln('- Disgustos: ${profile.dislikes!.join(', ')}');
+    }
+
+    // Si el contexto está vacío, usamos un mensaje genérico.
+    final finalContext = userContext.toString().isEmpty ? 'No hay información adicional del usuario.' : userContext.toString();
+
     try {
       // Enviar a la IA
       final response = await _aiRepository.sendMessage(
-        userMessage: text,
+        userMessage: '$text\n\n--- Contexto del Usuario ---\n$finalContext',
         conversationHistory: messages.toList(),
       );
 
@@ -67,7 +80,7 @@ class AiChefController extends GetxController {
       // Si la IA generó una receta completa, la mostramos
       if (response.recipe != null) {
         currentRecipe.value = response.recipe;
-        _showRecipeDialog(response.recipe!);
+        // La UI ahora reaccionará a este cambio y mostrará el diálogo.
       }
     } on ServerException catch (e) {
       _showErrorSnackbar('Error de GhostChef', e.message);
@@ -92,76 +105,13 @@ class AiChefController extends GetxController {
     });
   }
 
-  void _showRecipeDialog(RecipeData recipe) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.restaurant_menu, color: Color(0xFF00FFB8)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                recipe.nombre,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                recipe.descripcion,
-                style: TextStyle(color: Colors.white.withOpacity(0.8)),
-              ),
-              const SizedBox(height: 16),
-              _buildSectionTitle('Categoría'),
-              Text(
-                recipe.categoria,
-                style: const TextStyle(color: Color(0xFF00FFB8)),
-              ),
-              const SizedBox(height: 16),
-              _buildSectionTitle('Ingredientes'),
-              ...recipe.ingredientes.map((ing) => _buildListItem(ing)),
-              const SizedBox(height: 16),
-              _buildSectionTitle('Pasos'),
-              ...recipe.pasos.asMap().entries.map((entry) => _buildStepItem(entry.key + 1, entry.value)),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Seguir chateando', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Get.back(); // Cierra el diálogo
-              createOrderFromRecipe(recipe);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00FFB8),
-              foregroundColor: Colors.black,
-            ),
-            icon: const Icon(Icons.outdoor_grill_outlined),
-            label: const Text('Hacer Pedido'),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
-    );
-  }
-
-  Future<void> createOrderFromRecipe(RecipeData recipeData) async {
+  /// Intenta crear un pedido a partir de una receta de la IA.
+  ///
+  /// Devuelve `true` si el pedido se creó con éxito, `false` en caso contrario.
+  /// La UI es responsable de mostrar feedback (loading, snackbars) basado en
+  /// el estado `isCreatingOrder` y el resultado de este Future.
+  Future<bool> createOrderFromRecipe(RecipeData recipeData) async {
     isCreatingOrder.value = true;
-    Get.dialog(
-      const Center(child: CircularProgressIndicator(color: Color(0xFF00FFB8))),
-      barrierDismissible: false,
-    );
 
     try {
       final userId = _sessionController.userProfile.value?.id;
@@ -177,7 +127,7 @@ class AiChefController extends GetxController {
         steps: recipeData.pasos,
         imageUrl: null, // Sin imagen por ahora
         category: recipeData.categoria,
-        basePrice: 15000.0, // Precio base sugerido para recetas de IA
+        basePrice: recipeData.precioSugerido.toDouble(), // ← USAR PRECIO DE LA IA
         type: RecipeType.aiGenerated,
         createdAt: DateTime.now(),
       );
@@ -189,59 +139,27 @@ class AiChefController extends GetxController {
         CartItem.fromRecipe(savedRecipe),
       );
 
-      if (Get.isDialogOpen!) Get.back(); // Cierra el diálogo de carga
-
-      Get.snackbar(
-        '¡Pedido Creado! 🎉',
-        'Tu receta "${recipeData.nombre}" está esperando a que una cocina la haga realidad.',
-        backgroundColor: const Color(0xFF4CAF50),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-        icon: const Icon(Icons.check_circle, color: Colors.white),
-      );
-
+      return true; // Éxito
     } on ServerException catch (e) {
-      if (Get.isDialogOpen!) Get.back();
       _showErrorSnackbar('Error al crear pedido', e.message);
+      return false; // Fallo
     } catch (e) {
-      if (Get.isDialogOpen!) Get.back();
       _showErrorSnackbar('Error inesperado', 'No se pudo crear el pedido: $e');
+      return false; // Fallo
     } finally {
       isCreatingOrder.value = false;
     }
   }
 
   void clearChat() {
+    // Al limpiar el chat, también nos aseguramos de ocultar cualquier diálogo de receta.
     messages.clear();
     currentRecipe.value = null;
     _addMessage(ChatMessage(
       role: 'assistant',
       content: '¡Empecemos de nuevo! ¿Qué te gustaría cocinar hoy?',
     ));
-  }
-
-  // --- Widgets y Helpers privados ---
-
-  Widget _buildSectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(title, style: const TextStyle(color: Color(0xFF00FFB8), fontWeight: FontWeight.bold, fontSize: 16)),
-      );
-
-  Widget _buildListItem(String text) => Padding(
-        padding: const EdgeInsets.only(left: 8, top: 4),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('• ', style: TextStyle(color: Color(0xFF00FFB8))),
-          Expanded(child: Text(text, style: TextStyle(color: Colors.white.withOpacity(0.9)))),
-        ]),
-      );
-
-  Widget _buildStepItem(int number, String text) => Padding(
-        padding: const EdgeInsets.only(left: 8, top: 8),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('$number. ', style: const TextStyle(color: Color(0xFF00FFB8), fontWeight: FontWeight.bold)),
-          Expanded(child: Text(text, style: TextStyle(color: Colors.white.withOpacity(0.9)))),
-        ]),
-      );
+  }  
 
   void _showErrorSnackbar(String title, String message) {
     Get.snackbar(title, message, backgroundColor: Colors.redAccent, colorText: Colors.white);

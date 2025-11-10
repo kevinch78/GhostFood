@@ -36,6 +36,7 @@ class RecipeData {
   final String nombre;
   final String descripcion;
   final String categoria;
+  final int precioSugerido; 
   final List<String> ingredientes;
   final List<String> pasos;
 
@@ -43,6 +44,7 @@ class RecipeData {
     required this.nombre,
     required this.descripcion,
     required this.categoria,
+    required this.precioSugerido,
     required this.ingredientes,
     required this.pasos,
   });
@@ -52,6 +54,7 @@ class RecipeData {
       nombre: json['nombre'],
       descripcion: json['descripcion'],
       categoria: json['categoria'],
+      precioSugerido: json['precioSugerido'] ?? 15000, // ← AGREGADO con fallback
       ingredientes: List<String>.from(json['ingredientes']),
       pasos: List<String>.from(json['pasos']),
     );

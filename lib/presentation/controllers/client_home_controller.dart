@@ -15,15 +15,13 @@ class ClientHomeController extends GetxController {
   final RxList<String> categories = <String>['Todos'].obs;
   final RxString selectedCategory = 'Todos'.obs;
 
-  // --- GETTERS ---
-
   @override
   void onInit() {
     super.onInit();
     loadProducts();
 
-    // Worker para filtrar productos automáticamente cuando cambia la categoría o la lista principal.
-    everAll([_allRecipes, selectedCategory], (_) {
+    // Cambia everAll por ever solo en selectedCategory
+    ever(selectedCategory, (_) {
       _updateFilteredProducts();
     });
   }
@@ -45,6 +43,9 @@ class ClientHomeController extends GetxController {
           .where((c) => c.isNotEmpty)
           .toSet();
       categories.assignAll(['Todos', ...recipeCategories]);
+
+      // Actualiza los productos filtrados después de cargar
+      _updateFilteredProducts();
 
     } catch (e) {
       Get.snackbar(

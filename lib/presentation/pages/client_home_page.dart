@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ghost_food/auth/auth_service.dart';
+import 'package:ghost_food/domain/entities/order_entity.dart';
 import 'package:ghost_food/presentation/controllers/cart_controller.dart';
 import 'package:ghost_food/presentation/widgets/category_filter_list_client.dart';
 import 'package:ghost_food/presentation/pages/ai_chef_page.dart';
 import 'package:ghost_food/presentation/controllers/client_home_controller.dart';
+import 'package:ghost_food/presentation/controllers/my_orders_controller.dart';
 import 'package:ghost_food/presentation/pages/my_orders_page.dart';
 import 'package:ghost_food/presentation/widgets/recipe_card_client.dart';
 import 'package:ghost_food/presentation/pages/shopping_cart_page.dart';
@@ -19,16 +20,28 @@ class ClientHomePage extends StatelessWidget {
     // Inyectamos el controlador para la vista del cliente.
     final controller = Get.put(ClientHomeController());
     final cartController = Get.find<CartController>();
+    // Inyectamos el controlador de "Mis Pedidos" para obtener el contador.
+    final myOrdersController = Get.put(MyOrdersController());
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       appBar: CustomAppBar(
         title: 'Explorar Sabores',
         actions: [
-          IconButton(
-            onPressed: () => Get.to(() => const MyOrdersPage()),
-            icon: const Icon(Icons.receipt_long_outlined, color: Colors.white),
-            tooltip: 'Mis Pedidos',
+          Obx(
+            () {
+              // Contamos solo los pedidos que no han sido entregados o cancelados.
+              final activeOrdersCount = myOrdersController.myOrders.where((o) => o.status != OrderStatus.delivered && o.status != OrderStatus.cancelled).length;
+              return IconButton(
+                onPressed: () => Get.to(() => const MyOrdersPage()),
+                icon: Badge(
+                  label: Text('$activeOrdersCount'),
+                  isLabelVisible: activeOrdersCount > 0,
+                  child: const Icon(Icons.receipt_long_outlined, color: Colors.white),
+                ),
+                tooltip: 'Mis Pedidos',
+              );
+            }
           ),
           Obx(
             () => IconButton(
@@ -41,11 +54,6 @@ class ClientHomePage extends StatelessWidget {
               ),
               tooltip: 'Ver carrito',
             ),
-          ),
-          IconButton(
-            onPressed: () => Get.find<AuthService>().signOutAndClean(),
-            icon: const Icon(Icons.logout, color: Color(0xFFFF6B6B)),
-            tooltip: 'Cerrar sesión',
           ),
         ],
       ),

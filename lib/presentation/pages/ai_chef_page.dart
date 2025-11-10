@@ -3,15 +3,58 @@ import 'package:get/get.dart';
 import 'package:ghost_food/domain/repositories/ai_recipe_repository.dart';
 import 'package:ghost_food/presentation/controllers/ai_chef_controller.dart';
 
-class AiChefPage extends StatelessWidget {
+class AiChefPage extends StatefulWidget {
   const AiChefPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.put(AiChefController());
+  State<AiChefPage> createState() => _AiChefPageState();
+}
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0D),
+class _AiChefPageState extends State<AiChefPage> {
+  final controller = Get.put(AiChefController());
+
+  @override
+  void initState() {
+    super.initState();
+    // Escuchamos los cambios en la receta actual para mostrar el diálogo.
+    // Usamos 'ever' de GetX para reaccionar a los cambios en el observable.
+    ever(controller.currentRecipe, _handleRecipeDialog);
+  }
+
+  void _handleRecipeDialog(RecipeData? recipe) {
+    // Si hay una receta y no hay un diálogo abierto, lo mostramos.
+    if (recipe != null && Get.isDialogOpen != true) {      
+      Get.dialog(
+        _RecipeDialog(
+          recipe: recipe,
+          onOrder: () async {
+            Get.back(); // Cierra el diálogo
+            final success = await controller.createOrderFromRecipe(recipe);
+            if (success && mounted) {
+              Get.snackbar(
+                '¡Pedido Creado! 🎉',
+                'Tu receta "${recipe.nombre}" está esperando a que una cocina la haga realidad.',
+                backgroundColor: const Color(0xFF4CAF50),
+                colorText: Colors.white,
+                icon: const Icon(Icons.check_circle, color: Colors.white),
+              );
+            }
+            // El controlador se encarga de mostrar el snackbar de error.
+          },
+        ),
+        barrierDismissible: false,
+      ).whenComplete(() {
+        // Esta es la forma correcta de ejecutar código cuando el diálogo se cierra.
+        // Limpiamos la receta para que el diálogo no se vuelva a abrir.
+        controller.currentRecipe.value = null;
+      }
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(backgroundColor: const Color(0xFF0D0D0D),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1A1A),
         elevation: 0,
@@ -52,49 +95,63 @@ class AiChefPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Obx(() => ListView.builder(
-                  controller: controller.scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: controller.messages.length,
-                  itemBuilder: (context, index) {
-                    final message = controller.messages[index];
-                    return _buildMessageBubble(message);
-                  },
-                )),
-          ),
-          Obx(() {
-            if (controller.isLoading.value) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF00FFB8),
-                        strokeWidth: 2,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      'GhostChef está pensando...',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
+      body: Obx(
+        () => Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: controller.scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: controller.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = controller.messages[index];
+                      return _buildMessageBubble(message);
+                    },
+                  ),
                 ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-          _buildInputArea(controller),
-        ],
+                if (controller.isLoading.value)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF00FFB8),
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          'GhostChef está pensando...',
+                          style: TextStyle(color: Colors.white.withOpacity(0.7), fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ),
+                  ),
+                _buildInputArea(controller),
+              ],
+            ),
+            // Overlay de carga para la creación del pedido
+            if (controller.isCreatingOrder.value)
+              Container(
+                color: Colors.black.withOpacity(0.7),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF00FFB8)),
+                      SizedBox(height: 16),
+                      Text('Creando tu pedido...', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -214,4 +271,92 @@ class AiChefPage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Un widget de diálogo para mostrar la receta generada por la IA.
+class _RecipeDialog extends StatelessWidget {
+  final RecipeData recipe;
+  final VoidCallback onOrder;
+
+  const _RecipeDialog({required this.recipe, required this.onOrder});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          const Icon(Icons.restaurant_menu, color: Color(0xFF00FFB8)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              recipe.nombre,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              recipe.descripcion,
+              style: TextStyle(color: Colors.white.withOpacity(0.8)),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionTitle('Categoría'),
+            Text(
+              recipe.categoria,
+              style: const TextStyle(color: Color(0xFF00FFB8)),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionTitle('Ingredientes'),
+            ...recipe.ingredientes.map((ing) => _buildListItem(ing)),
+            const SizedBox(height: 16),
+            _buildSectionTitle('Pasos'),
+            ...recipe.pasos.asMap().entries.map((entry) => _buildStepItem(entry.key + 1, entry.value)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(),
+          child: const Text('Seguir chateando', style: TextStyle(color: Colors.white70)),
+        ),
+        ElevatedButton.icon(
+          onPressed: onOrder,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00FFB8),
+            foregroundColor: Colors.black,
+          ),
+          icon: const Icon(Icons.outdoor_grill_outlined),
+          label: const Text('Hacer Pedido'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(title, style: const TextStyle(color: Color(0xFF00FFB8), fontWeight: FontWeight.bold, fontSize: 16)),
+      );
+
+  Widget _buildListItem(String text) => Padding(
+        padding: const EdgeInsets.only(left: 8, top: 4),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('• ', style: TextStyle(color: Color(0xFF00FFB8))),
+          Expanded(child: Text(text, style: TextStyle(color: Colors.white.withOpacity(0.9)))),
+        ]),
+      );
+
+  Widget _buildStepItem(int number, String text) => Padding(
+        padding: const EdgeInsets.only(left: 8, top: 8),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('$number. ', style: const TextStyle(color: Color(0xFF00FFB8), fontWeight: FontWeight.bold)),
+          Expanded(child: Text(text, style: TextStyle(color: Colors.white.withOpacity(0.9)))),
+        ]),
+      );
 }

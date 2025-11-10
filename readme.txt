@@ -379,3 +379,66 @@ CREATE POLICY "Allow users to view relevant orders"
       )
     )
   );
+
+5----
+-- Eliminar el trigger anterior
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- Crear nueva función que NO asigna rol
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Crear perfil vacío, SIN rol asignado
+  INSERT INTO public.profiles (id)
+  VALUES (NEW.id)
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Recrear el trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+--6
+-- 1. Eliminar la política de UPDATE existente que está causando el conflicto.
+DROP POLICY IF EXISTS "Allow users to update their own profile" ON public.profiles;
+
+-- 2. Crear una nueva política de UPDATE que use 'WITH CHECK'.
+-- 'WITH CHECK' se asegura de que el usuario solo pueda modificar su propia fila,
+-- que es exactamente lo que necesitamos al crear/actualizar el perfil.
+CREATE POLICY "Allow users to update their own profile"
+  ON public.profiles FOR UPDATE
+  USING (true) -- Permite que la operación de UPDATE comience para cualquier fila
+  WITH CHECK (auth.uid() = id); -- PERO solo la completa si el ID coincide con el del usuario.
+
+---
+Desde el 5 y 6 es para de arreglar lo que no deja poner roll y el roll se pone solito como cliente antes 
+de eso no se que tocamos y se daño esa parte 
+---
+7-----
+-- PASO 1: Eliminar el trigger y la función existentes.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- PASO 2: Recrear la función, pero esta vez con la configuración de seguridad correcta.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Insertamos el perfil vacío, SIN rol asignado.
+  INSERT INTO public.profiles (id)
+  VALUES (NEW.id)
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql 
+-- ¡ESTA ES LA LÍNEA CLAVE! Le dice a Supabase que ejecute esta función
+-- con los permisos del creador de la función (el superusuario), saltándose las RLS.
+SECURITY DEFINER;
+
+-- PASO 3: Recrear el trigger para que use la nueva función.
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+

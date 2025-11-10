@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:ghost_food/auth/auth_service.dart';
 import 'package:ghost_food/data/models/order_model.dart';
 import 'package:ghost_food/domain/entities/order_entity.dart';
+import 'package:ghost_food/domain/entities/recipe_entity.dart';
 import 'package:ghost_food/presentation/controllers/cook_home_controller.dart';
 import 'package:ghost_food/domain/entities/agreement_entity.dart';
 import 'package:ghost_food/presentation/controllers/recipe_detail_page.dart';
@@ -23,7 +24,7 @@ class _CookHomePageState extends State<CookHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this); // ✅ Cambiado de 3 a 4
   }
 
   @override
@@ -39,14 +40,14 @@ class _CookHomePageState extends State<CookHomePage>
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       appBar: CustomAppBar(
-        title: 'Marketplace de Recetas',
-        actions: [
-          IconButton(
-            onPressed: () => Get.find<AuthService>().signOutAndClean(),
-            icon: const Icon(Icons.logout, color: Color(0xFFFF6B6B)),
-            tooltip: 'Cerrar sesión',
-          ),
-        ],
+        title: 'Cocina GhostFood',
+        // actions: [
+        //   IconButton(
+        //     onPressed: () => Get.find<AuthService>().signOutAndClean(),
+        //     icon: const Icon(Icons.logout, color: Color(0xFFFF6B6B)),
+        //     tooltip: 'Cerrar sesión',
+        //   ),
+        // ],
       ),
       body: Column(
         children: [
@@ -56,6 +57,7 @@ class _CookHomePageState extends State<CookHomePage>
               controller: _tabController,
               children: [
                 _buildRecipeMarketplaceView(controller),
+                _buildAiRecipesView(controller), // ✅ Nueva pestaña
                 _buildPendingOrdersView(controller),
                 _buildActiveOrdersView(controller),
               ],
@@ -83,15 +85,15 @@ class _CookHomePageState extends State<CookHomePage>
         dividerColor: Colors.transparent,
         labelColor: Colors.black,
         unselectedLabelColor: Colors.white70,
-        labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         tabs: [
-          // 🥘 Tab Recetas
-          Tab(
+          // 🥘 Tab Recetas (usuarios)
+          const Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.storefront, size: 20),
-                SizedBox(width: 6),
+              children: [
+                Icon(Icons.storefront, size: 18),
+                SizedBox(width: 4),
                 Flexible(
                   child: Text(
                     'Recetas',
@@ -101,6 +103,29 @@ class _CookHomePageState extends State<CookHomePage>
                 ),
               ],
             ),
+          ),
+
+          // 🤖 Tab Recetas IA (nuevo)
+          Tab(
+            child: Obx(() {
+              final aiCount = controller.allRecipes
+                  .where((r) => r.type == RecipeType.aiGenerated)
+                  .length;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.auto_awesome, size: 18),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'IA ($aiCount)',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              );
+            }),
           ),
 
           // 📦 Tab Pedidos
@@ -113,9 +138,9 @@ class _CookHomePageState extends State<CookHomePage>
                   Badge(
                     label: Text('$pendingCount'),
                     isLabelVisible: pendingCount > 0,
-                    child: const Icon(Icons.notifications_active_outlined, size: 20),
+                    child: const Icon(Icons.notifications_active_outlined, size: 18),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   const Flexible(
                     child: Text(
                       'Pedidos',
@@ -129,15 +154,15 @@ class _CookHomePageState extends State<CookHomePage>
           ),
 
           // 🔥 Tab En Progreso
-          Tab(
+          const Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.outdoor_grill_outlined, size: 20),
-                SizedBox(width: 6),
+              children: [
+                Icon(Icons.outdoor_grill_outlined, size: 18),
+                SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    'En Progreso',
+                    'Activos',
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -150,11 +175,167 @@ class _CookHomePageState extends State<CookHomePage>
     );
   }
 
+  // ✅ NUEVA VISTA: Recetas de IA
+  Widget _buildAiRecipesView(CookHomeController controller) {
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF00FFB8)));
+      }
+      
+      final aiRecipes = controller.allRecipes
+          .where((r) => r.type == RecipeType.aiGenerated)
+          .toList();
+
+      if (aiRecipes.isEmpty) {
+        return const EmptyState(
+          icon: Icons.auto_awesome_outlined,
+          title: 'Sin recetas de IA aún',
+          subtitle: 'Las recetas generadas por GhostChef aparecerán aquí.',
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: controller.loadInitialData,
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+          itemCount: aiRecipes.length,
+          itemBuilder: (context, index) {
+            final recipe = aiRecipes[index];
+            return GestureDetector(
+              onTap: () => Get.to(() => RecipeDetailPage(recipe: recipe)),
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                color: const Color(0xFF1A1A1A),
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: const Color(0xFF00FFB8).withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (recipe.imageUrl != null)
+                      Image.network(recipe.imageUrl!,
+                          height: 150, fit: BoxFit.cover),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00FFB8).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.auto_awesome, 
+                                      size: 14, 
+                                      color: Color(0xFF00FFB8)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'IA',
+                                      style: TextStyle(
+                                        color: Color(0xFF00FFB8),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  recipe.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (recipe.description != null)
+                            Text(
+                              recipe.description!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 14,
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Precio Sugerido: \$${recipe.basePrice.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: Color(0xFF00FFB8),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00FFB8).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle, 
+                                  color: Color(0xFF00FFB8), 
+                                  size: 16),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Uso libre • Sin permisos necesarios',
+                                    style: TextStyle(
+                                      color: Color(0xFF00FFB8),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    });
+  }
+
   Widget _buildRecipeMarketplaceView(CookHomeController controller) {
     return Obx(() {
       if (controller.isLoading.value) {
         return const Center(
             child: CircularProgressIndicator(color: Color(0xFF00FFB8)));
+      }
+      if (controller.marketplaceRecipes.isEmpty) {
+        return const EmptyState(
+          icon: Icons.restaurant_menu_outlined,
+          title: 'Sin recetas disponibles',
+          subtitle: 'Las recetas de creadores aparecerán aquí.',
+        );
       }
       return RefreshIndicator(
         onRefresh: controller.loadInitialData,
@@ -227,7 +408,7 @@ class _CookHomePageState extends State<CookHomePage>
           icon: Icons.notifications_off_outlined,
           title: 'Sin pedidos pendientes',
           subtitle:
-              'Aquí aparecerán los nuevos pedidos de tus recetas licenciadas.',
+              'Aquí aparecerán los nuevos pedidos disponibles.',
         );
       }
       return RefreshIndicator(
@@ -395,15 +576,12 @@ class _CookHomePageState extends State<CookHomePage>
     );
   }
 
-  /// Maneja la lógica de la UI para aceptar un pedido.
   void _handleAcceptOrder(CookHomeController controller, OrderEntity order) async {
-    final success = await controller.acceptOrder(order);
+    try {
+      await controller.acceptOrder(order);
 
-    // Usamos 'context.mounted' para asegurarnos de que el widget todavía está en el árbol
-    // antes de mostrar un SnackBar. Es una buena práctica en métodos async.
-    if (!context.mounted) return;
+      if (!context.mounted) return;
 
-    if (success) {
       Get.snackbar(
         '¡Pedido Aceptado!',
         'Prepara "${order.recipe?.name ?? 'receta desconocida'}" para el cliente.',
@@ -411,10 +589,11 @@ class _CookHomePageState extends State<CookHomePage>
         colorText: Colors.white,
         icon: const Icon(Icons.check_circle, color: Colors.white),
       );
-    } else {
+    } catch (e) {
+      if (!context.mounted) return;
       Get.snackbar(
         'Error al aceptar',
-        'El pedido no pudo ser aceptado. Es posible que ya haya sido tomado por otra cocina.',
+        'El pedido no pudo ser aceptado. Es posible que ya haya sido tomado por otra cocina. ($e)',
         backgroundColor: const Color(0xFFFF6B6B),
         colorText: Colors.white,
         icon: const Icon(Icons.error_outline, color: Colors.white),

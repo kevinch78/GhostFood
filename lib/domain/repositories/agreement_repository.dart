@@ -8,4 +8,6 @@ abstract class AgreementRepository {
   Stream<List<AgreementEntity>> getAgreementsStreamByCreator(String creatorId);
 
   Stream<List<AgreementEntity>> getAgreementsStreamByKitchen(String kitchenId);
+  
+  Future<List<AgreementEntity>> getAllApprovedAgreements();
 }

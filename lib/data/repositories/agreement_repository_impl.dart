@@ -33,7 +33,6 @@ class AgreementRepositoryImpl implements AgreementRepository {
 
       Future<void> fetchAndEmit() async {
         try {
-          // ← CORREGIDO: Especificar explícitamente las relaciones
           final response = await _client
               .from(_tableName)
               .select('''
@@ -100,7 +99,6 @@ class AgreementRepositoryImpl implements AgreementRepository {
 
       Future<void> fetchAndEmit() async {
         try {
-          // ← CORREGIDO: Especificar explícitamente las relaciones
           final response = await _client
               .from(_tableName)
               .select('''
@@ -170,6 +168,28 @@ class AgreementRepositoryImpl implements AgreementRepository {
       await _client.from(_tableName).update(updateData).eq('id', agreementId);
     } catch (e) {
       throw ServerException('Error al actualizar el estado del convenio: $e');
+    }
+  }
+
+  @override
+  Future<List<AgreementEntity>> getAllApprovedAgreements() async {
+    try {
+      final response = await _client
+          .from(_tableName)
+          .select('''
+            *,
+            recipe:recipes(*),
+            kitchen:kitchen_id(*),
+            creator:creator_id(*)
+          ''')
+          .eq('status', 'APPROVED')
+          .order('approved_at', ascending: false);
+      
+      return (response as List)
+          .map((json) => AgreementModel.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw ServerException('Error al obtener convenios aprobados: $e');
     }
   }
 }

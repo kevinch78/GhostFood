@@ -34,6 +34,13 @@ class SessionController extends GetxController {
     userProfile.value = profile;
   }
 
+  /// Actualiza el perfil del usuario en la sesión actual.
+  /// Útil después de que el usuario edita su perfil.
+  void updateProfile(ProfileEntity updatedProfile) {
+    userProfile.value = updatedProfile;
+    update(); // Notifica a los listeners que el objeto ha cambiado internamente.
+  }
+
   void clearUserProfile() {
     userProfile.value = null;
   }

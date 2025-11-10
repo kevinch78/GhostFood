@@ -28,13 +28,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<void> createProfile(ProfileEntity profile) async {
-    await _supabase.from('profiles').insert({
+    // ✅ CAMBIO: Usar upsert() en lugar de insert()
+    // Esto actualiza si existe o crea si no existe
+    await _supabase.from('profiles').upsert({
       'id': profile.id,
       'full_name': profile.fullName,
-      'role': profile.role.name, // .name convierte el enum a string ('cliente', 'cocinero', 'creador')
+      'role': profile.role.name,
     });
   }
-  
 
   // --- HELPERS ---
 
@@ -43,17 +44,31 @@ class ProfileRepositoryImpl implements ProfileRepository {
       id: map['id'],
       fullName: map['full_name'],
       role: _roleFromString(map['role']),
-      // Aquí se añadirán más campos en el futuro
+      kitchenName: map['kitchen_name'],
+      kitchenDescription: map['kitchen_description'],
+      photoUrl: map['photo_url'],
+      locationCity: map['location_city'],
+      dislikes: map['dislikes'] != null 
+          ? List<String>.from(map['dislikes']) 
+          : null,
+      allergies: map['allergies'] != null 
+          ? List<String>.from(map['allergies']) 
+          : null,
     );
   }
 
-  UserRole _roleFromString(String role) {
+  UserRole _roleFromString(String? role) {
+    // ✅ Manejar caso donde role es null
+    if (role == null) {
+      throw Exception('Role is null in database');
+    }
+    
     switch (role) {
       case 'cliente':
         return UserRole.cliente;
       case 'cocinero':
         return UserRole.cocinero;
-      case 'creador': // ¡LA LÍNEA QUE FALTABA!
+      case 'creador':
         return UserRole.creador;
       default:
         throw Exception('Unknown role: $role');

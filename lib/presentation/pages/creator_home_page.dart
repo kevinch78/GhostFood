@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ghost_food/auth/auth_service.dart';
 import 'package:ghost_food/domain/entities/agreement_entity.dart';
 import 'package:ghost_food/presentation/controllers/creator_home_controller.dart';
 import 'package:ghost_food/presentation/widgets/empty_state.dart';
@@ -40,13 +39,6 @@ class _CreatorHomePageState extends State<CreatorHomePage> with SingleTickerProv
         backgroundColor: const Color(0xFF0D0D0D),
         appBar: CustomAppBar(
           title: 'Panel del Creador',
-          actions: [
-            IconButton(
-              onPressed: () => Get.find<AuthService>().signOutAndClean(),
-              icon: const Icon(Icons.logout, color: Color(0xFFFF6B6B)),
-              tooltip: 'Cerrar sesión',
-            ),
-          ],
         ),
         body: Column(
           children: [
