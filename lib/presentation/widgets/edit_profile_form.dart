@@ -10,8 +10,6 @@ class EditProfileForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos Get.put() para crear una instancia del controlador para este formulario.
-    // Se eliminará automáticamente cuando el widget se destruya.
     final controller = Get.put(EditProfileController());
     final userRole = Get.find<SessionController>().userProfile.value?.role;
 

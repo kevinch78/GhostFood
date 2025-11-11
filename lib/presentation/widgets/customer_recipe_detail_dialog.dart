@@ -17,7 +17,6 @@ class CustomerRecipeDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Encontramos el CartController para poder añadir items.
     final CartController cartController = Get.find();
 
     return Dialog(
@@ -25,12 +24,11 @@ class CustomerRecipeDetailDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20.0),
       ),
-      clipBehavior: Clip.antiAlias, // Importante para que la imagen respete los bordes redondeados
+      clipBehavior: Clip.antiAlias, 
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // --- Sección de Imagen (si existe) ---
           if (recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty)
             SizedBox(
               height: 180,
@@ -52,7 +50,6 @@ class CustomerRecipeDetailDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- Título de la Receta ---
                 Text(
                   recipe.name,
                   style: GoogleFonts.poppins(
@@ -63,7 +60,6 @@ class CustomerRecipeDetailDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // --- Descripción ---
                 Text(
                   recipe.description ?? 'Sin descripción disponible.',
                   style: TextStyle(
@@ -74,7 +70,6 @@ class CustomerRecipeDetailDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // --- Precio y Botón ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Un campo de texto personalizado con estilo consistente para la aplicación.
 class AppTextFormField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
@@ -8,7 +7,7 @@ class AppTextFormField extends StatelessWidget {
   final bool obscureText;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
-  final Widget? suffixIcon; // Permite pasar un IconButton directamente
+  final Widget? suffixIcon; 
 
   const AppTextFormField({
     super.key,

@@ -30,17 +30,14 @@ class OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Si es pendiente -> mostramos UI de pedido pendiente
     if (_isPending) {
       return _buildPendingCard(context);
     }
 
-    // Si es activo -> mostramos UI de pedido activo
     if (_isActive) {
       return _buildActiveCard(context);
     }
 
-    // Fallback: mostrar información básica
     return Card(
       color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 12),

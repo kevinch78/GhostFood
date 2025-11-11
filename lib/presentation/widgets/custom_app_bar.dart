@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum _MenuOptions { editProfile, logout }
 
-const double _appBarHeight = 70.0; // Nueva altura personalizada
+const double _appBarHeight = 70.0; 
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -31,7 +31,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: () => Get.back(),
             )
           : null,
-      backgroundColor: Colors.transparent, // Hacemos el fondo transparente
+      backgroundColor: Colors.transparent, 
       elevation: 0,
       flexibleSpace: Container(
         decoration: const BoxDecoration(
@@ -52,13 +52,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           title,
           style: const TextStyle(
             fontSize: 22,
-            fontWeight: FontWeight.w900, // Un poco más grueso para que destaque
-            color: Colors.white, // El color base sobre el que actúa el gradiente
+            fontWeight: FontWeight.w900, 
+            color: Colors.white, 
           ),
         ),
       ),
       actions: [
-        ...?actions, // Incluye acciones adicionales si se proporcionan
+        ...?actions, 
         PopupMenuButton<_MenuOptions>(
           icon: const Icon(Icons.more_vert, color: Colors.white),
           color: const Color(0xFF2D2D2D),
